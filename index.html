@@ -5,9 +5,16 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Line highlighter</title>
+    <link rel="preconnect" href="https://fonts.gstatic.com">
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400&display=swap" rel="stylesheet">
     <style>
         #editableDiv {
             border-style: dotted;
+        }
+
+        html,
+        body {
+            font-family: 'IBM Plex Mono', monospace;
         }
 
         body {
@@ -23,14 +30,16 @@
         <li>Input lines to highlight in the input textbox below. Press Enter when done.</li>
         <li>Copy the formatted text in the first box into Powerpoint</li>
     </ol>
-    <p>Repo: <a href="https://github.com/rampadc/line-highlighter-direct-apply">https://github.com/rampadc/line-highlighter-direct-apply</a></p>
+    <p>Repo: <a
+            href="https://github.com/rampadc/line-highlighter-direct-apply">https://github.com/rampadc/line-highlighter-direct-apply</a>
+    </p>
 
     <div id='editableDiv' contenteditable='true'>Paste your formatted code here</div>
 
     <label for="line-highlighter">Lines to highlight (empty = none):</label>
-        <input type="text" name="line-highlighter" id="line-highlighter-input" placeholder="1,5-9,13"
+    <input type="text" name="line-highlighter" id="line-highlighter-input" placeholder="1,5-9,13"
         onkeyup="handleLineInputKeyUp(event)">
-    
+
 
     <button id="highlightBtn" onclick="startHighlightWork()">Highlight</button>
 
@@ -38,7 +47,8 @@
         let codeLinesCount = null; // assigned in handlePaste(), number
         let codeDiv = null; // assigned a value in startHighlightWork()
         let codeBackgroundColor = null; // assigned a value in startHighlightWork(), format: [r, g, b] each as int
-
+        let mac_preservedTextData = null; // assigned in handlePaste(), string
+        let mac_isOnMac = false;
         /**
          * Utility functions for colours
          */
@@ -120,14 +130,14 @@
             let linesToHighlight = [];
             for (let i = 0; i < linesToHighlightInput.length; i++) {
                 const lineText = linesToHighlightInput[i];
-                
+
                 const range = getRangeFromText(lineText);
                 linesToHighlight = linesToHighlight.concat(range);
             }
 
             const setOfLinesToHighlight = new Set(linesToHighlight);
 
-            
+
             const allLines = range(0, totalLineCount);
             const dimmedLines = allLines.filter(value => {
                 return !setOfLinesToHighlight.has(value);
@@ -149,7 +159,7 @@
                     // function.
                     // Each character/code token is colourised with a span [2.gif]
                     let tokens = lines[i].querySelectorAll('span');
-                    for(let j = 0; j < tokens.length; j++) {
+                    for (let j = 0; j < tokens.length; j++) {
                         let tokenColourRGB = getRGBComponents(tokens[j].style.color);
                         let tokenColourNewRGB = RGBAtoRGB(
                             tokenColourRGB[0], tokenColourRGB[1], tokenColourRGB[2], 0.5,
@@ -162,10 +172,31 @@
         }
 
         /**
+         * macOS related functions
+         * 
+         * On macOS, `whitespace: pre` CSS is enabled. This preserves the styling in browser but not in copied text
+         */
+        function preserveLeadingWhiteSpace() {
+            let htmlLines = codeDiv.querySelectorAll('div');
+            let textLines = mac_preservedTextData.split('\n');
+            for (let i = 0; i < htmlLines.length; i++) {
+                // match leading whitespace, this can be both tabs or spaces
+                const whitespaceMatchesInPlainText = textLines[i].match(/^(\s+)(?=[^\s]+)/gm);
+                if (whitespaceMatchesInPlainText) {
+                    const htmlTokens = htmlLines[i].querySelectorAll('span');
+                    // the number of spaces is preserved in browser only thanks to `whitespace: pre`, but not in copied text
+                    // Chrome, Firefox and Edge auto expand tabs in preview
+                    htmlTokens[0].innerHTML = '&nbsp;'.repeat(htmlTokens[0].innerText.length);
+                }
+            }
+        }
+
+        /**
          * DOM event handlers 
          */
         window.onload = function () {
             document.getElementById('line-highlighter-input').addEventListener('onkeyup', handleLineInputKeyUp);
+            mac_isOnMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
         }
 
         function handlePaste(e) {
@@ -178,12 +209,14 @@
             // Get pasted data via clipboard API
             clipboardData = e.clipboardData || window.clipboardData;
             pastedData = clipboardData.getData('text/html');
-            codeLinesCount = getNumberOfLinesFromFormattedTextAsNumber(clipboardData.getData('text'));
+            const pastedDataText = clipboardData.getData('text');
+            mac_preservedTextData = pastedDataText;
+            codeLinesCount = getNumberOfLinesFromFormattedTextAsNumber(pastedDataText);
 
             document.getElementById('editableDiv').innerHTML = pastedData;
         }
 
-        function handleLineInputKeyUp(evt) {         
+        function handleLineInputKeyUp(evt) {
             if (evt.keyCode == 13) {
                 startHighlightWork();
             }
@@ -192,7 +225,7 @@
         function extractLinesToDimFromDOM() {
             const highlightInput = document.getElementById('line-highlighter-input').value;
 
-            
+
             codeDiv = document.querySelector('#editableDiv > div');
             codeBackgroundColor = getRGBComponents(
                 window.getComputedStyle(codeDiv).getPropertyValue('background-color'));
@@ -207,6 +240,10 @@
 
             const linesToDim = extractLinesToDimFromDOM();
             dimUnwantedText(linesToDim);
+
+            if (mac_isOnMac) {
+                preserveLeadingWhiteSpace();
+            }
         }
 
         document.getElementById('editableDiv').addEventListener('paste', handlePaste);

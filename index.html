@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Line highlighter</title>
+    <style>
+        #editableDiv {
+            border-style: dotted;
+        }
+
+        body {
+            padding: 16px;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>The One True Line Highlighter</h1>
+    <ol>
+        <li>Paste a piece of formatted code into the dotted box.</li>
+        <li>Input lines to highlight in the input textbox below. Press Enter when done.</li>
+        <li>Copy the formatted text in the first box into Powerpoint</li>
+    </ol>
+
+    <div id='editableDiv' contenteditable='true'>Paste your formatted code here</div>
+
+    <form action="">       
+        <label for="line-highlighter">Lines to highlight (empty = ALL):</label>
+        <input type="text" name="line-highlighter" id="line-highlighter-input" placeholder="1,5-9,13"
+        onkeyup="handleLineInputKeyUp(event)">
+    </form>
+    
+
+    <button id="highlightBtn" onclick="startHighlightWork()">Highlight</button>
+
+    <script>
+        let codeLinesCount = null; // assigned in handlePaste(), number
+        let codeDiv = null; // assigned a value in startHighlightWork()
+        let codeBackgroundColor = null; // assigned a value in startHighlightWork(), format: [r, g, b] each as int
+
+        /**
+         * Utility functions for colours
+         */
+
+        // https://gist.github.com/tqc/2564280
+        function RGBAtoRGB(r, g, b, a, r2, g2, b2) {
+            var r3 = Math.round(((1 - a) * r2) + (a * r))
+            var g3 = Math.round(((1 - a) * g2) + (a * g))
+            var b3 = Math.round(((1 - a) * b2) + (a * b))
+            return "rgb(" + r3 + "," + g3 + "," + b3 + ")";
+        }
+
+        function getRGBComponents(rgbString) {
+            const rgbStrArray = rgbString.match(/\d+/g);
+            let rgbArray = [];
+            rgbStrArray.forEach(val => rgbArray.push(parseInt(val)));
+            return rgbArray;
+        }
+
+        /**
+         * Utility functions to get line number ranges
+         */
+
+        function range(start, end) {
+            if (start > end) {
+                return [];
+            }
+
+            if (start === end) {
+                return [start];
+            }
+
+            return [start, ...range(start + 1, end)];
+        }
+
+        function getRangeFromText(text) {
+            const regex = /(\d+)-(\d+)/gm;
+            let m;
+
+            let results = [];
+
+            while ((m = regex.exec(text)) !== null) {
+                // This is necessary to avoid infinite loops with zero-width matches
+                if (m.index === regex.lastIndex) {
+                    regex.lastIndex++;
+                }
+
+                // The result can be accessed through the `m`-variable.
+                m.forEach((match, groupIndex) => {
+                    if (groupIndex > 0) {
+                        results.push(parseInt(match));
+                    }
+                });
+            }
+
+            if (results.length === 0) {
+                results = [parseInt(text) - 1];
+            } else {
+                results = [...range(results[0] - 1, results[1] - 1)];
+            }
+            return results;
+        }
+
+        /**
+         * Highlight code logic
+         */
+        function getNumberOfLinesFromFormattedTextAsNumber(text) {
+            let lines = text.split('\n');
+            return lines.length;
+        }
+
+        function extractLineNumbersToDimAsSet(text, totalLineCount) {
+            if (totalLineCount === null) {
+                alert("Paste some code first");
+                return;
+            }
+
+            const linesToHighlightInput = text.split(',');
+            let linesToHighlight = [];
+            for (let i = 0; i < linesToHighlightInput.length; i++) {
+                const lineText = linesToHighlightInput[i];
+                
+                const range = getRangeFromText(lineText);
+                linesToHighlight = linesToHighlight.concat(range);
+            }
+
+            const setOfLinesToHighlight = new Set(linesToHighlight);
+
+            
+            const allLines = range(0, totalLineCount);
+            const dimmedLines = allLines.filter(value => {
+                return !setOfLinesToHighlight.has(value);
+            });
+
+            return dimmedLines;
+        }
+
+        // linesToDim: number[], start from 0
+        function dimUnwantedText(linesToDim) {
+            const linesToDimSet = new Set(linesToDim);
+            // Each line correspond to a div in codeDiv [1.gif]
+            let lines = codeDiv.querySelectorAll('div');
+            for (let i = 0; i < lines.length; i++) {
+                if (linesToDimSet.has(i)) {
+                    // Dim line if line index is included 
+                    // To dim elements, go through each element and reduce the
+                    // alpha by 0.5. To make the colours stick, use RGBAtoRGB 
+                    // function.
+                    // Each character/code token is colourised with a span [2.gif]
+                    let tokens = lines[i].querySelectorAll('span');
+                    for(let j = 0; j < tokens.length; j++) {
+                        let tokenColourRGB = getRGBComponents(tokens[j].style.color);
+                        let tokenColourNewRGB = RGBAtoRGB(
+                            tokenColourRGB[0], tokenColourRGB[1], tokenColourRGB[2], 0.5,
+                            codeBackgroundColor[0], codeBackgroundColor[1], codeBackgroundColor[2]
+                        );
+                        tokens[j].style.color = tokenColourNewRGB;
+                    }
+                }
+            }
+        }
+
+        /**
+         * DOM event handlers 
+         */
+        window.onload = function () {
+            document.getElementById('line-highlighter-input').addEventListener('onkeyup', handleLineInputKeyUp);
+        }
+
+        function handlePaste(e) {
+            var clipboardData, pastedData;
+
+            // Stop data actually being pasted into div
+            e.stopPropagation();
+            e.preventDefault();
+
+            // Get pasted data via clipboard API
+            clipboardData = e.clipboardData || window.clipboardData;
+            pastedData = clipboardData.getData('text/html');
+            codeLinesCount = getNumberOfLinesFromFormattedTextAsNumber(clipboardData.getData('text'));
+
+            document.getElementById('editableDiv').innerHTML = pastedData;
+        }
+
+        function handleLineInputKeyUp(evt) {         
+            if (evt.keyCode == 13) {
+                startHighlightWork();
+            }
+        }
+
+        function extractLinesToDimFromDOM() {
+            const highlightInput = document.getElementById('line-highlighter-input').value;
+
+            
+            codeDiv = document.querySelector('#editableDiv > div');
+            codeBackgroundColor = getRGBComponents(
+                window.getComputedStyle(codeDiv).getPropertyValue('background-color'));
+
+            return dimmedLines = extractLineNumbersToDimAsSet(highlightInput, codeLinesCount);
+        }
+        function startHighlightWork() {
+            if (codeLinesCount === null) {
+                alert("Paste some formatted code first");
+                return;
+            }
+
+            const linesToDim = extractLinesToDimFromDOM();
+            dimUnwantedText(linesToDim);
+        }
+
+        document.getElementById('editableDiv').addEventListener('paste', handlePaste);
+    </script>
+</body>
+
+</html>

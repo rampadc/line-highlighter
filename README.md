@@ -2,7 +2,7 @@
 
 This project highlights specific lines of interest in a code snippet. The result can be copy/pasted back into a Powerpoint slide with the resulting highlight.
 
-![Demo](demo.gif)
+![Demo](docs/demo.gif)
 
 ## How it works
 
@@ -12,9 +12,9 @@ The corresponding GIFs mentioned are as below:
 
 **1.gif**
 
-![1.gif](1.gif)
+![1.gif](docs/1.gif)
 
 **2.gif**
 
-![2.gif](2.gif)
+![2.gif](docs/2.gif)
 

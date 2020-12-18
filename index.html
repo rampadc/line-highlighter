@@ -26,11 +26,9 @@
 
     <div id='editableDiv' contenteditable='true'>Paste your formatted code here</div>
 
-    <form action="">       
-        <label for="line-highlighter">Lines to highlight (empty = ALL):</label>
+    <label for="line-highlighter">Lines to highlight (empty = ALL):</label>
         <input type="text" name="line-highlighter" id="line-highlighter-input" placeholder="1,5-9,13"
         onkeyup="handleLineInputKeyUp(event)">
-    </form>
     
 
     <button id="highlightBtn" onclick="startHighlightWork()">Highlight</button>

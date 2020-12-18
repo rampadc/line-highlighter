@@ -10,11 +10,11 @@ Have a look through `dimUnwantedText()` in `index.html`. The code goes over each
 
 The corresponding GIFs mentioned are as below:
 
-1.gif
+**1.gif**
 
 ![1.gif](1.gif)
 
-2.gif 
+**2.gif**
 
 ![2.gif](2.gif)
 

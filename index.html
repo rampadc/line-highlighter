@@ -43,6 +43,7 @@
 
 
     <button id="highlightBtn" onclick="startHighlightWork()">Highlight</button>
+    <button id="highlightBtn" onclick="removeHighlightWork()">Remove highlights</button>
 
     <script>
         let codeLinesCount = null; // assigned in handlePaste(), number
@@ -50,6 +51,7 @@
         let codeBackgroundColor = null; // assigned a value in startHighlightWork(), format: [r, g, b] each as int
         let mac_preservedTextData = null; // assigned in handlePaste(), string
         let mac_isOnMac = false;
+        let initialPastedHTMLData = null;  // assigned in handlePaste(), html string
         /**
          * Utility functions for colours
          */
@@ -210,8 +212,18 @@
             // Get pasted data via clipboard API
             clipboardData = e.clipboardData || window.clipboardData;
             pastedData = clipboardData.getData('text/html');
+
+            // save a copy of the pasted data for the "remove highlight" button
+            initialPastedHTMLData = pastedData;
+
+            // get a copy of the pasted data as text-only data
             const pastedDataText = clipboardData.getData('text');
+            
+            // save a copy of this text-only data for macOS processing, due to platform's difference in handling starting whitespace
+            // see preserveLeadingWhiteSpace() for implementaiton
             mac_preservedTextData = pastedDataText;
+
+            // count number of lines of text from the pasted text-only data for highlighting later
             codeLinesCount = getNumberOfLinesFromFormattedTextAsNumber(pastedDataText);
 
             document.getElementById('editableDiv').innerHTML = pastedData;
@@ -245,6 +257,10 @@
             if (mac_isOnMac) {
                 preserveLeadingWhiteSpace();
             }
+        }
+
+        function removeHighlightWork() {
+            document.getElementById('editableDiv').innerHTML = initialPastedHTMLData;
         }
 
         document.getElementById('editableDiv').addEventListener('paste', handlePaste);

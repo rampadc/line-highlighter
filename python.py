@@ -8,9 +8,9 @@ def getForwardHeaders(request):
     span_context=span.context,
     format=Format.HTTP_HEADERS,
     carrier=carrier)
-  headers.update(carrier)
+  headers.update(carrier)
 
   if 'user' in session:
     headers['end-user'] = session['user']
-  # [... more code]
-  return headers
+  # [... more code]
+  return headers

@@ -189,30 +189,29 @@
          */
         function preserveLeadingWhiteSpace() {
             console.clear();
+            console.log(`preserveLeadingWhiteSpace()`);
 
             let leadingWhiteSpaceRegex = /(^\s+)(.+)/gm;
             let htmlLines = codeDiv.querySelectorAll('div');
-            let textLines = mac_preservedTextData.split('\n');
-            // let debugCount = 1;
+            let debugCount = 1;
 
             let whitespacePostProcess = [];
 
             for (let i = 0; i < htmlLines.length; i++) {
-                // const textWithWhiteSpace = leadingWhiteSpaceRegex.exec(textLines[i]);
-                const text = textLines[i];              
-                // console.log(text);
-
+                const text = htmlLines[i].innerText;
                 const hasWhiteSpaceInFront = text.match(leadingWhiteSpaceRegex) != null;
-                if (hasWhiteSpaceInFront) {
-                    // console.log(debugCount++);
 
+                if (hasWhiteSpaceInFront) {
                     // this should not be null, as the match was performed earlier
                     const leadingWhiteSpaceRegexExecResults = leadingWhiteSpaceRegex.exec(text);
                     if (leadingWhiteSpaceRegexExecResults === null) console.error("CODE ERROR, NULL FOUND");
+
                     const leadingWhiteSpace = leadingWhiteSpaceRegexExecResults[1];
+                    console.log(`${text}, ${hasWhiteSpaceInFront}, ${leadingWhiteSpaceRegexExecResults[1].length}`);
+
                     whitespacePostProcess.push('&nbsp;'.repeat(leadingWhiteSpace.length));
-                    // console.log(leadingWhiteSpace.length);
                 } else {
+                    console.log(`${text}, ${hasWhiteSpaceInFront}, 0`);
                     whitespacePostProcess.push("");
                 }
             }
@@ -225,12 +224,15 @@
                 const line = htmlLines[i];
 
                 const spans = line.querySelectorAll('span');
-                console.log(spans[0]);
+                // console.log(spans[0]);
                 if (spans[0].innerText.trim().length == 0) {
                     // remove element from line
                     line.removeChild(line.childNodes[0]);
+                } else {
+                    spans[0].innerText = spans[0].innerText.trimStart();
                 }
-            }            
+            }      
+
             // add space with non-breaking spaces
             for (let i = 0; i < htmlLines.length; i++) {
                 // create a new span for the whitespace

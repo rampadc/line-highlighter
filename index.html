@@ -45,6 +45,7 @@
     <button id="highlightBtn" onclick="removeHighlightWork()">Remove highlights</button>
 
     <script>
+        let pasted = false;
         let codeLinesCount = null; // assigned in handlePaste(), number
         let codeDiv = null; // assigned a value in startHighlightWork()
         let codeBackgroundColor = null; // assigned a value in startHighlightWork(), format: [r, g, b] each as int
@@ -161,7 +162,7 @@
         function dimUnwantedText(linesToDim) {
             const linesToDimSet = new Set(linesToDim);
             // Each line correspond to a div in codeDiv [1.gif]
-            let lines = codeDiv.querySelectorAll('div');
+            let lines = codeDiv.childNodes;
             for (let i = 0; i < lines.length; i++) {
                 if (linesToDimSet.has(i)) {
                     // Dim line if line index is included 
@@ -188,9 +189,6 @@
          * On macOS, `whitespace: pre` CSS is enabled. This preserves the styling in browser but not in copied text
          */
         function preserveLeadingWhiteSpace() {
-            console.clear();
-            console.log(`preserveLeadingWhiteSpace()`);
-
             let leadingWhiteSpaceRegex = /(^\s+)(.+)/gm;
             let htmlLines = codeDiv.querySelectorAll('div');
             let debugCount = 1;
@@ -207,11 +205,8 @@
                     if (leadingWhiteSpaceRegexExecResults === null) console.error("CODE ERROR, NULL FOUND");
 
                     const leadingWhiteSpace = leadingWhiteSpaceRegexExecResults[1];
-                    console.log(`${text}, ${hasWhiteSpaceInFront}, ${leadingWhiteSpaceRegexExecResults[1].length}`);
-
                     whitespacePostProcess.push('&nbsp;'.repeat(leadingWhiteSpace.length));
-                } else {
-                    console.log(`${text}, ${hasWhiteSpaceInFront}, 0`);
+                } else {         
                     whitespacePostProcess.push("");
                 }
             }
@@ -224,7 +219,6 @@
                 const line = htmlLines[i];
 
                 const spans = line.querySelectorAll('span');
-                // console.log(spans[0]);
                 if (spans[0].innerText.trim().length == 0) {
                     // remove element from line
                     line.removeChild(line.childNodes[0]);
@@ -275,6 +269,7 @@
             codeLinesCount = getNumberOfLinesFromFormattedTextAsNumber(pastedDataText);
 
             document.getElementById('editableDiv').innerHTML = pastedData;
+            pasted = true;
         }
 
         function handleLineInputKeyUp(evt) {
@@ -285,8 +280,6 @@
 
         function extractLinesToDimFromDOM() {
             const highlightInput = document.getElementById('line-highlighter-input').value;
-
-
             codeDiv = document.querySelector('#editableDiv > div');
             codeBackgroundColor = getRGBComponents(
                 window.getComputedStyle(codeDiv).getPropertyValue('background-color'));
@@ -294,7 +287,7 @@
             return dimmedLines = extractLineNumbersToDimAsSet(highlightInput, codeLinesCount);
         }
         function startHighlightWork() {
-            if (codeLinesCount === null) {
+            if (pasted == false) {
                 alert("Paste some formatted code first");
                 return;
             }

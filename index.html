@@ -187,9 +187,10 @@
                 const whitespaceMatchesInPlainText = textLines[i].match(/^(\s+)(?=[^\s]+)/gm);
                 if (whitespaceMatchesInPlainText) {
                     const htmlTokens = htmlLines[i].querySelectorAll('span');
+
                     // the number of spaces is preserved in browser only thanks to `whitespace: pre`, but not in copied text
                     // Chrome, Firefox and Edge auto expand tabs in preview
-                    htmlTokens[0].innerHTML = '&nbsp;'.repeat(htmlTokens[0].innerText.length);
+                    htmlTokens[0].innerHTML.replace(/\s/, '&nbsp;');
                 }
             }
         }

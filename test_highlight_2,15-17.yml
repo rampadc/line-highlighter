@@ -1,20 +1,16 @@
-apiVersion: networking.istio.io/v1alpha3
-kind: VirtualService
+apiVersion: security.istio.io/v1beta1
+kind: AuthorizationPolicy
 metadata:
-  name: reviews
+  name: productpage-jwt-authz
+  namespace: istio-bookinfo
 spec:
-  hosts:
-  - reviews
-  http:
-  - match:
-    headers:
-      end-user:
-        exact: jason
-    route:
-    - destination:
-        host: reviews
-        subset: v2 
-  - route:
-    - destination:
-        host: reviews
-        subset: v3
+  selector:
+    matchLabels:
+      app: productpage
+  rules:
+  - to:
+    - operation:
+        methods: ["GET"]
+    when:
+    - key: request.auth.claims[foo]
+      values: ["bar"]

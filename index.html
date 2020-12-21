@@ -31,8 +31,7 @@
         <li>Input lines to highlight in the input textbox below. Press Enter when done.</li>
         <li>Copy the formatted text in the first box into Powerpoint</li>
     </ol>
-    <p>Repo: <a
-            href="https://github.com/rampadc/line-highlighter">https://github.com/rampadc/line-highlighter</a>
+    <p>Repo: <a href="https://github.com/rampadc/line-highlighter">https://github.com/rampadc/line-highlighter</a>
     </p>
 
     <div id='editableDiv' contenteditable='true'>Paste your formatted code here</div>
@@ -52,6 +51,15 @@
         let mac_preservedTextData = null; // assigned in handlePaste(), string
         let mac_isOnMac = false;
         let initialPastedHTMLData = null;  // assigned in handlePaste(), html string
+        /**
+         * Utility functions for regex
+         */
+        function executeRegex(regex, text) {
+            if (regex.exec(text) === null) return null;
+
+            return regex.exec(text);
+        }
+
         /**
          * Utility functions for colours
          */
@@ -180,18 +188,55 @@
          * On macOS, `whitespace: pre` CSS is enabled. This preserves the styling in browser but not in copied text
          */
         function preserveLeadingWhiteSpace() {
+            console.clear();
+
+            let leadingWhiteSpaceRegex = /(^\s+)(.+)/gm;
             let htmlLines = codeDiv.querySelectorAll('div');
             let textLines = mac_preservedTextData.split('\n');
-            for (let i = 0; i < htmlLines.length; i++) {
-                // match leading whitespace, this can be both tabs or spaces
-                const whitespaceMatchesInPlainText = textLines[i].match(/^(\s+)(?=[^\s]+)/gm);
-                if (whitespaceMatchesInPlainText) {
-                    const htmlTokens = htmlLines[i].querySelectorAll('span');
+            // let debugCount = 1;
 
-                    // the number of spaces is preserved in browser only thanks to `whitespace: pre`, but not in copied text
-                    // Chrome, Firefox and Edge auto expand tabs in preview
-                    htmlTokens[0].innerHTML.replace(/\s/, '&nbsp;');
+            let whitespacePostProcess = [];
+
+            for (let i = 0; i < htmlLines.length; i++) {
+                // const textWithWhiteSpace = leadingWhiteSpaceRegex.exec(textLines[i]);
+                const text = textLines[i];              
+                // console.log(text);
+
+                const hasWhiteSpaceInFront = text.match(leadingWhiteSpaceRegex) != null;
+                if (hasWhiteSpaceInFront) {
+                    // console.log(debugCount++);
+
+                    // this should not be null, as the match was performed earlier
+                    const leadingWhiteSpaceRegexExecResults = leadingWhiteSpaceRegex.exec(text);
+                    if (leadingWhiteSpaceRegexExecResults === null) console.error("CODE ERROR, NULL FOUND");
+                    const leadingWhiteSpace = leadingWhiteSpaceRegexExecResults[1];
+                    whitespacePostProcess.push('&nbsp;'.repeat(leadingWhiteSpace.length));
+                    // console.log(leadingWhiteSpace.length);
+                } else {
+                    whitespacePostProcess.push("");
                 }
+            }
+
+            // collapse all spaces
+            codeDiv.style.whiteSpace = 'nowrap';
+
+            // check to make sure there are no leading empty spans (with invisible spaces)
+            for (let i = 0; i < htmlLines.length; i++) {
+                const line = htmlLines[i];
+
+                const spans = line.querySelectorAll('span');
+                console.log(spans[0]);
+                if (spans[0].innerText.trim().length == 0) {
+                    // remove element from line
+                    line.removeChild(line.childNodes[0]);
+                }
+            }            
+            // add space with non-breaking spaces
+            for (let i = 0; i < htmlLines.length; i++) {
+                // create a new span for the whitespace
+                const whitespaceSpan = document.createElement('span');
+                whitespaceSpan.innerHTML = whitespacePostProcess[i];
+                htmlLines[i].prepend(whitespaceSpan);
             }
         }
 
@@ -219,7 +264,7 @@
 
             // get a copy of the pasted data as text-only data
             const pastedDataText = clipboardData.getData('text');
-            
+
             // save a copy of this text-only data for macOS processing, due to platform's difference in handling starting whitespace
             // see preserveLeadingWhiteSpace() for implementaiton
             mac_preservedTextData = pastedDataText;
